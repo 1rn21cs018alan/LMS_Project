@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Problem Statement Editor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: white;
+        }
+        h1 {
+            text-align: center;
+        }
+        form {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(72, 71, 11, 0.1);
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px;
+            margin: 10px 5px;
+            border: none;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #problemContainer {
+            background: white;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            border-bottom: 2px solid #333;
+            padding-bottom: 5px;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Problem Statement Generator</h1>
+
+    <!-- form -->
+    <form id="problemForm">
+        <label>Problem Title:</label>
+        <input type="text" id="problemTitle" placeholder="Enter problem title" required>
+
+        <label>Problem Description:</label>
+        <textarea id="problemDescription" placeholder="Enter problem description" rows="4" required></textarea>
+
+        <label>Input Format:</label>
+        <textarea id="inputFormat" placeholder="Describe input format" rows="3" required></textarea>
+
+        <label>Output Format:</label>
+        <textarea id="outputFormat" placeholder="Describe output format" rows="3" required></textarea>
+
+        <label>Constraints:</label>
+        <textarea id="constraints" placeholder="Describe constraints" rows="3" optional></textarea>
+
+        <label>Sample Input:</label>
+        <textarea id="sampleInput" placeholder="Provide a sample input" rows="3" required></textarea>
+
+        <label>Sample Output:</label>
+        <textarea id="sampleOutput" placeholder="Provide a sample output" rows="3" required></textarea>
+
+        <label>Note:</label>
+        <textarea id="note" placeholder="Describe note" rows="3" required></textarea>
+
+        <button type="submit">Generate Problem</button>
+    </form>
+
+    <!-- area where problem statements are displayed-->
+    <div id="problemContainer"></div>
+
+    <script>
+        // separate variables for each sub-division
+            let problemTitle = "";
+            let problemDescription = "";
+            let inputFormat = "";
+            let outputFormat = "";
+            let constraints = "";
+            let sampleInput = "";
+            let sampleOutput = "";
+            let note = "";
+
+        // Function to generate and display the problem statement
+            document.getElementById("problemForm").addEventListener("submit", function(event) {
+            event.preventDefault(); // Prevents page reload
+
+        // Store user inputs into variables
+            problemTitle = document.getElementById("problemTitle").value;
+            problemDescription = document.getElementById("problemDescription").value;
+            inputFormat = document.getElementById("inputFormat").value;
+            outputFormat = document.getElementById("outputFormat").value;
+            constraints = document.getElementById("constraints").value;
+            sampleInput = document.getElementById("sampleInput").value;
+            sampleOutput = document.getElementById("sampleOutput").value;
+            note = document.getElementById("note").value;
+
+            // Display the content on the page
+            document.getElementById("problemContainer").innerHTML = `
+                <h1>${problemTitle}</h1>
+                <h2>Problem Statement</h2>
+                <p>${problemDescription}</p>
+                
+                <h2>Input Format</h2>
+                <pre>${inputFormat}</pre>
+                
+                <h2>Output Format</h2>
+                <pre>${outputFormat}</pre>
+                
+                <h2>Constraints</h2>
+                <pre>${constraints}</pre>
+                
+                <h2>Sample Input</h2>
+                <pre>${sampleInput}</pre>
+                
+                <h2>Sample Output</h2>
+                <pre>${sampleOutput}</pre>
+
+                <h2>Note</h2>
+                <pre>${note}</pre>
+            `;
+
+    // Debugging: Log individual variables to the console
+    console.log("Title:", problemTitle);
+    console.log("Description:", problemDescription);
+    console.log("Input Format:", inputFormat);
+    console.log("Output Format:", outputFormat);
+    console.log("Constraints:", constraints);
+    console.log("Sample Input:", sampleInput);
+    console.log("Sample Output:", sampleOutput);
+    console.log("Note:", note);
+});
+
+
+    </script>
+
+</body>
+</html>
