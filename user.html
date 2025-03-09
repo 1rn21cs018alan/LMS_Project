@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codevyu - User Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .resizable {
+            resize: horizontal;
+            overflow: auto;
+            min-width: 200px;
+            max-width: 50%;
+        }
+        .scrollable {
+            overflow-y: auto;
+            max-height: 300px;
+        }
+        .divider {
+            height: 5px;
+            background: #00C896;
+            cursor: ns-resize;
+        }
+    </style>
+</head>
+<body class="bg-[#181818] text-[#E0E0E0]">
+    <div class="flex h-screen">
+        <!-- Left Panel: Question Section -->
+        <div id="questionPanel" class="resizable bg-[#252525] p-4 shadow-lg w-1/2 border border-[#00C896]">
+            <h2 class="text-xl font-bold border-b pb-2 border-[#00C896]">Problem Statement</h2>
+            <p id="problemText" class="mt-2 text-white scrollable">This is the section...<br>
+              where all the problem statements will be displayed!
+            </p>
+        </div>
+        
+        <!-- Right Panel: Code Editor and Results Section -->
+        <div class="flex flex-col w-full p-4">
+            <textarea id="codeEditor" class="w-full h-2/3 p-2 border border-[#00C896] bg-[#252525] text-[#E0E0E0] rounded-md" placeholder="Write your code here..."></textarea>
+            
+            <!-- Draggable Divider -->
+            <div id="dragBar" class="divider"></div>
+            
+            <!-- Run Code Button -->
+            <button class="mt-2 bg-[#00C896] text-black px-4 py-2 rounded hover:bg-[#00A982]">Run Code</button>
+            
+            <!-- Bottom Panel: Results Section -->
+            <div id="resultsSection" class="bg-[#252525] p-3 mt-2 border border-[#00C896] rounded-md h-1/3">
+                <h2 class="text-lg font-semibold">Output</h2>
+                <div class="grid grid-cols-3 gap-2 mt-2">
+                    <div class="bg-[#303030] p-2 border border-[#00C896] rounded-md">
+                        <h3 class="text-sm font-bold">Test Case 1</h3>
+                        <pre id="output1" class="text-sm">Expected: - <br>Actual: - <br>Status: Pending...</pre>
+                    </div>
+                    <div class="bg-[#303030] p-2 border border-[#00C896] rounded-md">
+                        <h3 class="text-sm font-bold">Test Case 2</h3>
+                        <pre id="output2" class="text-sm">Expected: - <br>Actual: - <br>Status: Pending...</pre>
+                    </div>
+                    <div class="bg-[#303030] p-2 border border-[#00C896] rounded-md">
+                        <h3 class="text-sm font-bold">Test Case 3</h3>
+                        <pre id="output3" class="text-sm">Expected: - <br>Actual: - <br>Status: Pending...</pre>
+                    </div>
+                </div>
+                <!-- Execution Stats Section -->
+                <div class="bg-[#303030] p-2 border border-[#00C896] rounded-md mt-2">
+                    <h3 class="text-sm font-bold">Execution Stats</h3>
+                    <pre id="statsSection" class="text-sm">Execution Time: - ms | Memory Usage: - KB</pre>
+                </div>
+                <!-- Note Section -->
+                <div class="bg-[#303030] p-2 border border-[#00C896] rounded-md mt-2">
+                    <h3 class="text-sm font-bold">Note</h3>
+                    <pre id="noteSection" class="text-sm">No additional notes.</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const dragBar = document.getElementById("dragBar");
+        const editor = document.getElementById("codeEditor");
+        const results = document.getElementById("resultsSection");
+        let isDragging = false;
+    
+        dragBar.addEventListener("mousedown", function(e) {
+            isDragging = true;
+            document.addEventListener("mousemove", resizePanels);
+            document.addEventListener("mouseup", () => isDragging = false);
+        });
+    
+        function resizePanels(e) {
+            if (!isDragging) return;
+            let newHeight = e.clientY - editor.offsetTop;
+            if (newHeight > 100 && newHeight < window.innerHeight - 200) {
+                editor.style.height = `${newHeight}px`;
+                results.style.height = `${window.innerHeight - newHeight - 150}px`;
+            }
+        }
+    
+        //  Disable Copy, Cut, Paste 
+        editor.addEventListener("copy", (e) => e.preventDefault());
+        editor.addEventListener("cut", (e) => e.preventDefault());
+        editor.addEventListener("paste", (e) => e.preventDefault());
+    
+        // Block Ctrl + C, Ctrl + V, Ctrl + X 
+        editor.addEventListener("keydown", function (e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === "v" || e.key === "c" || e.key === "x")) {
+                e.preventDefault();
+            }
+        });
+    
+    </script>
+    
+</body>
+</html>
