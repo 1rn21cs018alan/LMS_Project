@@ -6,15 +6,27 @@ function Arr(...args) {
 }
 
 function is_alpha(v) {
+    if (v instanceof Array) {
+        return false
+    }
     return /^[a-zA-Z]+$/.test(v)
 }
 function is_alphanum(v) {
+    if (v instanceof Array) {
+        return false
+    }
     return /^[a-zA-Z0-9]+$/.test(v)
 }
 function is_numeric(v) {
+    if (v instanceof Array) {
+        return false
+    }
     return /^[a-zA-Z0-9]+$/.test(v)
 }
 function is_valid_identifier(v) {
+    if (v instanceof Array) {
+        return false
+    }
     return /^[_a-zA-Z][a-zA-Z0-9]*$/.test(v)
 }
 
@@ -132,22 +144,27 @@ function __interpreter() {
                 symbolTable["all"][value] = symbolTable["identifiers"][value]
                 symbolTable["length"] += 1
                 symbolTable["identifiers_length"] += 1
+                return symbolTable["identifiers"][value]
             }
         }
-        function add_constant(value) {
-            if (symbolTable["constants"][value] === undefined) {
-                symbolTable["constants"][value] = [2, symbolTable["constants_length"]]
-                symbolTable["all"][value] = symbolTable["constants"][value]
-                symbolTable["length"] += 1
-                symbolTable["constants_length"] += 1
-            }
-        }
+        // function add_constant(value) { //was unneeded
+        //     if (symbolTable["constants"][value] === undefined) {
+        //         symbolTable["constants"][value] = [2, symbolTable["constants_length"]]
+        //         symbolTable["all"][value] = symbolTable["constants"][value]
+        //         symbolTable["length"] += 1
+        //         symbolTable["constants_length"] += 1
+        //     }
+        // }
         function add_string(value) {
+            let v = value
+            value = String.fromCharCode(...v)
+            v.push(0)
             if (symbolTable["strings"][value] === undefined) {
-                symbolTable["strings"][value] = [2, symbolTable["strings_length"]]
+                symbolTable["strings"][value] = [4, symbolTable["strings_length"], v]
                 symbolTable["all"][value] = symbolTable["strings"][value]
                 symbolTable["length"] += 1
                 symbolTable["strings_length"] += 1
+                return symbolTable["strings"][value]
             }
         }
         let cur_line = lines[0][0], reading = "", reading_state = 'none';
@@ -170,411 +187,446 @@ function __interpreter() {
                 clear();
                 dfa(chr, line_no)
             }
-            if (reading.length == 0) {
-                reading = chr;
-                read_line = cur_line
-                if (is_white(reading)) {
-                    clear();
-                }
-                return
+            let hex_digit = {
+                0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9,
+                'a': 10, 'b': 11, 'c': 12, 'd': 13, 'e': 14, 'f': 15,
+                'A': 10, 'B': 11, 'C': 12, 'D': 13, 'E': 14, 'F': 15
+            }, escape_sequence = {
+                'a': 7, 'b': 8, 'f': 12, 'n': 10, 'r': 13,
+                't': 9, 'v': 11, '\\': 92, "'": 39, '"': 34,
             }
-            if (is_valid_identifier(reading)) {
-                if (is_valid_identifier(reading + chr)) {
-                    reading += chr
+            if(reading_state=='none'){
+                if (reading.length == 0) {
+                    reading = chr;
+                    read_line = cur_line
+                    if (is_white(reading)) {
+                        clear();
+                    }
+                    return
                 }
-                else {
-                    if (is_keyword(reading)) {
-                        tokenList.add([read_line, keywords[reading]])
+                if (is_valid_identifier(reading)) {
+                    if (is_valid_identifier(reading + chr)) {
+                        reading += chr
                     }
                     else {
-                        add_identifier(reading)
-                        tokenList.add([read_line, symbolTable['identifiers'][reading]])
-                    }
-                    revert()
-                }
-                return
-            }
-            if (reading == "+") {
-                if (chr == '+') {
-                    tokenList.add([read_line, operators["TOKEN_++"]])
-                    clear()
-                }
-                else if (chr == '=') {
-                    tokenList.add([read_line, operators["+="]])
-                    clear()
-                }
-                else {
-                    tokenList.add([read_line, operators["TOKEN_+"]])
-                    revert()
-                }
-                return;
-            }
-            if (reading == "-") {
-                if (chr == '-') {
-                    tokenList.add([read_line, operators["TOKEN_--"]])
-                    clear()
-                }
-                else if (chr == '=') {
-                    tokenList.add([read_line, operators["-="]])
-                    clear()
-                }
-                else if (chr == '>') {
-                    tokenList.add([read_line, operators["->"]])
-                    clear()
-                }
-                else {
-                    tokenList.add([read_line, operators["TOKEN_-"]])
-                    revert();
-                }
-                return;
-            }
-            if (reading == "%") {
-                if (chr == '=') {
-                    tokenList.add([read_line, operators["%="]])
-                    clear();
-                }
-                else {
-                    tokenList.add([read_line, operators["%"]])
-                    revert();
-                }
-                return;
-            }
-            if (reading == "/") {
-                if (chr == '=') {
-                    tokenList.add([read_line, operators["/="]])
-                    clear();
-                }
-                else if (chr == '/') {
-                    reading_state = 'single_comment';
-                }
-                else if (chr == '*') {
-                    reading_state = 'multi_comment';
-                    reading = '';
-                }
-                else {
-                    tokenList.add([read_line, operators["/"]])
-                    revert();
-                }
-                return;
-            }
-            if (reading == "*") {
-                if (chr == "=") {
-                    tokenList.add([read_line, operators["*="]])
-                    clear();
-                }
-                else {
-                    tokenList.add([read_line, operators['TOKEN_*']])
-                    revert();
-                }
-                return
-            }
-            if (reading == "!") {
-                if (chr == "=") {
-                    tokenList.add([read_line, operators["!="]])
-                    clear();
-                }
-                else {
-                    tokenList.add([read_line, operators["!"]])
-                    revert();
-                }
-                return
-            }
-            if (reading == "(") {
-                tokenList.add([read_line, operators['(']])
-                revert();
-                return
-            }
-            if (reading == ")") {
-                tokenList.add([read_line, operators['(']])
-                revert();
-                return
-            }
-            if (reading == "{") {
-                tokenList.add([read_line, operators['(']])
-                revert();
-                return
-            }
-            if (reading == "}") {
-                tokenList.add([read_line, operators['(']])
-                revert();
-                return
-            }
-            if (reading == "[") {
-                tokenList.add([read_line, operators['(']])
-                revert();
-                return
-            }
-            if (reading == "]") {
-                tokenList.add([read_line, operators['(']])
-                revert();
-                return
-            }
-            if (reading == ".") {
-                tokenList.add([read_line, operators['.']])
-                revert();
-                return
-            }
-            if (reading == "~") {
-                tokenList.add([read_line, operators['~']])
-                revert();
-                return
-            }
-            if (reading == "<") {
-                if (chr == "=") {
-                    tokenList.add([read_line, operators['<="']])
-                    clear();
-                }
-                else if (chr == "<") {
-                    reading = "<<"
-                }
-                else {
-                    tokenList.add([read_line, operators['<']])
-                    revert();
-                }
-                return
-            }
-            if (reading == ">") {
-                if (chr == "=") {
-                    tokenList.add([read_line, operators['>="']])
-                    clear();
-                }
-                else if (chr == ">") {
-                    reading = ">>"
-                }
-                else {
-                    tokenList.add([read_line, operators['>']])
-                    revert();
-                }
-                return
-            }
-            if (reading == "<<") {
-                if (chr == "=") {
-                    tokenList.add([read_line, operators['<<=']]);
-                    clear();
-                }
-                else {
-                    tokenList.add([read_line, operators['<<']]);
-                    revert();
-                }
-                return
-            }
-            if (reading == ">>") {
-                if (chr == "=") {
-                    tokenList.add([read_line, operators['>>=']]);
-                    clear();
-                }
-                else {
-                    tokenList.add([read_line, operators['>>']]);
-                    revert();
-                }
-                return
-            }
-            if (reading == "&") {
-                if (chr == "=") {
-                    tokenList.add([read_line, operators['&=']]);
-                    clear();
-                }
-                else if (chr == "&") {
-                    tokenList.add([read_line, operators['&&']]);
-                    clear();
-                }
-                else {
-                    tokenList.add([read_line, operators['TOKEN_&']]);
-                    revert();
-                }
-                return
-            }
-            if (reading == "^") {
-                if (chr == "=") {
-                    tokenList.add([read_line, operators['^=']]);
-                    clear();
-                }
-                else {
-                    tokenList.add([read_line, operators['^']]);
-                    revert();
-                }
-                return
-            }
-            if (reading == "|") {
-                if (chr == "=") {
-                    tokenList.add([read_line, operators['|=']]);
-                    clear();
-                }
-                else if (chr == "|") {
-                    tokenList.add([read_line, operators['||']]);
-                    clear();
-                }
-                else {
-                    tokenList.add([read_line, operators['|']]);
-                    revert();
-                }
-                return
-            }
-            if (reading == "?") {
-                tokenList.add([read_line, operators['TOKEN_?']]);
-                revert();
-                return
-            }
-            if (reading == ":") {
-                tokenList.add([read_line, operators['TOKEN_:']]);
-                revert();
-                return
-            }
-            if (reading == ",") {
-                tokenList.add([read_line, operators[',']]);
-                revert();
-                return
-            }
-            if (reading == ";") {
-                tokenList.add([read_line, operators[';']]);
-                revert();
-                return
-            }
-            if (reading == "=") {
-                if (chr == '=') {
-                    tokenList.add([read_line, operators['==']]);
-                    clear();
-                }
-                else {
-                    tokenList.add([read_line, operators['=']]);
-                    revert();
-                }
-                return
-            }
-            if (reading == '0') {
-                if (chr == 'b' || chr == 'B') {
-                    //handle binary prefix
-                    reading = "0b"
-                }
-                else if (chr == 'x' || chr == 'X') {
-                    //handle Hexadecimal prefix
-                    reading = "0x"
-                }
-                else if (chr == 'o' || chr == 'O') {
-                    //handle octal prefix
-                    reading = "0o"
-                }
-                else if (is_numeric(chr)) {
-                    //handle octal prefix
-                    reading = '0o' + chr
-                }
-                else if (chr == '.' || chr == 'e' || chr == 'E') {
-                    //handle floating point exponents
-                    if (chr == '.') {
-                        reading = reading + chr
-                        reading_state = 'float_dot'
-                    }
-                    else if (chr == 'e') {
-                        reading = reading + chr
-                        reading_state = 'float_expo'
-                    }
-                    else {
-                        reading = '0e'
-                        reading_state = 'float_expo'
-                    }
-                }
-                else {
-                    // store a Zero int;
-                    tokenList.add([read_line, [3, ['i', 0]]]);
-                    revert();
-                }
-                return
-            }
-            if (reading[0] == '0' && reading[1] == 'b') {
-                if (chr == '0' || chr == '1') {
-                    reading += chr;
-                }
-                else if (is_numeric(chr)) {
-                    ERROR_OCCURED = true;
-                    ERR_msg = "incorrect binary format, 0 or 1 expected"
-                }
-                else if (reading == '0b') {
-                    ERROR_OCCURED = true;
-                    ERR_msg = "incorrect binary format, must have at least one bit"
-                }
-                else {
-                    //convert binary to decimal
-                    let val = 0;
-                    for (let bin_ind = 2; bin_ind < reading.length; bin_ind++) {
-                        val = val << 1;
-                        if (reading[bin_ind] == '1') {
-                            val++;
-                        }
-                    }
-                    tokenList.add([read_line, [3, ['i', val]]]);
-                    revert();
-                }
-                return
-            }
-            if (reading[0] == '0' && reading[1] == 'x') {
-                if (/^[a-fA-F0-9]$/.test(chr)) {
-                    reading += chr;
-                }
-                else if (reading == '0x') {
-                    ERROR_OCCURED = true;
-                    ERR_msg = "Invalid Hex Format, expected at least one hex digit"
-                }
-                else {
-                    //convert hex to decimal
-                    let val = 0;
-                    for (let hex_ind = 2; hex_ind < reading.length; hex_ind++) {
-                        val = val << 4;
-                        if (is_numeric(reading[hex_ind])) {
-                            val += Number(reading[hex_ind]);
+                        if (is_keyword(reading)) {
+                            tokenList.add([read_line, keywords[reading]])
                         }
                         else {
-                            val += {
-                                'a': 10, 'b': 11, 'c': 12, 'd': 13, 'e': 14, 'f': 15,
-                                'A': 10, 'B': 11, 'C': 12, 'D': 13, 'E': 14, 'F': 15
-                            }[reading[hex_ind]];
+                            add_identifier(reading)
+                            tokenList.add([read_line, symbolTable['identifiers'][reading]])
+                        }
+                        revert()
+                    }
+                    return
+                }
+                if (reading == "+") {
+                    if (chr == '+') {
+                        tokenList.add([read_line, operators["TOKEN_++"]])
+                        clear()
+                    }
+                    else if (chr == '=') {
+                        tokenList.add([read_line, operators["+="]])
+                        clear()
+                    }
+                    else {
+                        tokenList.add([read_line, operators["TOKEN_+"]])
+                        revert()
+                    }
+                    return;
+                }
+                if (reading == "-") {
+                    if (chr == '-') {
+                        tokenList.add([read_line, operators["TOKEN_--"]])
+                        clear()
+                    }
+                    else if (chr == '=') {
+                        tokenList.add([read_line, operators["-="]])
+                        clear()
+                    }
+                    else if (chr == '>') {
+                        tokenList.add([read_line, operators["->"]])
+                        clear()
+                    }
+                    else {
+                        tokenList.add([read_line, operators["TOKEN_-"]])
+                        revert();
+                    }
+                    return;
+                }
+                if (reading == "%") {
+                    if (chr == '=') {
+                        tokenList.add([read_line, operators["%="]])
+                        clear();
+                    }
+                    else {
+                        tokenList.add([read_line, operators["%"]])
+                        revert();
+                    }
+                    return;
+                }
+                if (reading == "/") {
+                    if (chr == '=') {
+                        tokenList.add([read_line, operators["/="]])
+                        clear();
+                    }
+                    else if (chr == '/') {
+                        reading = '//'
+                        reading_state = 'single_comment';
+                    }
+                    else if (chr == '*') {
+                        reading_state = 'multi_comment';
+                        reading = '/*';
+                    }
+                    else {
+                        tokenList.add([read_line, operators["/"]])
+                        revert();
+                    }
+                    return;
+                }
+                if (reading == "*") {
+                    if (chr == "=") {
+                        tokenList.add([read_line, operators["*="]])
+                        clear();
+                    }
+                    else {
+                        tokenList.add([read_line, operators['TOKEN_*']])
+                        revert();
+                    }
+                    return
+                }
+                if (reading == "!") {
+                    if (chr == "=") {
+                        tokenList.add([read_line, operators["!="]])
+                        clear();
+                    }
+                    else {
+                        tokenList.add([read_line, operators["!"]])
+                        revert();
+                    }
+                    return
+                }
+                if (reading == "(") {
+                    tokenList.add([read_line, operators['(']])
+                    revert();
+                    return
+                }
+                if (reading == ")") {
+                    tokenList.add([read_line, operators[')']])
+                    revert();
+                    return
+                }
+                if (reading == "{") {
+                    tokenList.add([read_line, operators['{']])
+                    revert();
+                    return
+                }
+                if (reading == "}") {
+                    tokenList.add([read_line, operators['}']])
+                    revert();
+                    return
+                }
+                if (reading == "[") {
+                    tokenList.add([read_line, operators['[']])
+                    revert();
+                    return
+                }
+                if (reading == "]") {
+                    tokenList.add([read_line, operators[']']])
+                    revert();
+                    return
+                }
+                if (reading == ".") {
+                    tokenList.add([read_line, operators['.']])
+                    revert();
+                    return
+                }
+                if (reading == "~") {
+                    tokenList.add([read_line, operators['~']])
+                    revert();
+                    return
+                }
+                if (reading == "<") {
+                    if (chr == "=") {
+                        tokenList.add([read_line, operators['<="']])
+                        clear();
+                    }
+                    else if (chr == "<") {
+                        reading = "<<"
+                    }
+                    else {
+                        tokenList.add([read_line, operators['<']])
+                        revert();
+                    }
+                    return
+                }
+                if (reading == ">") {
+                    if (chr == "=") {
+                        tokenList.add([read_line, operators['>="']])
+                        clear();
+                    }
+                    else if (chr == ">") {
+                        reading = ">>"
+                    }
+                    else {
+                        tokenList.add([read_line, operators['>']])
+                        revert();
+                    }
+                    return
+                }
+                if (reading == "<<") {
+                    if (chr == "=") {
+                        tokenList.add([read_line, operators['<<=']]);
+                        clear();
+                    }
+                    else {
+                        tokenList.add([read_line, operators['<<']]);
+                        revert();
+                    }
+                    return
+                }
+                if (reading == ">>") {
+                    if (chr == "=") {
+                        tokenList.add([read_line, operators['>>=']]);
+                        clear();
+                    }
+                    else {
+                        tokenList.add([read_line, operators['>>']]);
+                        revert();
+                    }
+                    return
+                }
+                if (reading == "&") {
+                    if (chr == "=") {
+                        tokenList.add([read_line, operators['&=']]);
+                        clear();
+                    }
+                    else if (chr == "&") {
+                        tokenList.add([read_line, operators['&&']]);
+                        clear();
+                    }
+                    else {
+                        tokenList.add([read_line, operators['TOKEN_&']]);
+                        revert();
+                    }
+                    return
+                }
+                if (reading == "^") {
+                    if (chr == "=") {
+                        tokenList.add([read_line, operators['^=']]);
+                        clear();
+                    }
+                    else {
+                        tokenList.add([read_line, operators['^']]);
+                        revert();
+                    }
+                    return
+                }
+                if (reading == "|") {
+                    if (chr == "=") {
+                        tokenList.add([read_line, operators['|=']]);
+                        clear();
+                    }
+                    else if (chr == "|") {
+                        tokenList.add([read_line, operators['||']]);
+                        clear();
+                    }
+                    else {
+                        tokenList.add([read_line, operators['|']]);
+                        revert();
+                    }
+                    return
+                }
+                if (reading == "?") {
+                    tokenList.add([read_line, operators['TOKEN_?']]);
+                    revert();
+                    return
+                }
+                if (reading == ":") {
+                    tokenList.add([read_line, operators['TOKEN_:']]);
+                    revert();
+                    return
+                }
+                if (reading == ",") {
+                    tokenList.add([read_line, operators[',']]);
+                    revert();
+                    return
+                }
+                if (reading == ";") {
+                    tokenList.add([read_line, operators[';']]);
+                    revert();
+                    return
+                }
+                if (reading == "=") {
+                    if (chr == '=') {
+                        tokenList.add([read_line, operators['==']]);
+                        clear();
+                    }
+                    else {
+                        tokenList.add([read_line, operators['=']]);
+                        revert();
+                    }
+                    return
+                }
+                if (reading == '0') {
+                    if (chr == 'b' || chr == 'B') {
+                        //handle binary prefix
+                        reading = "0b"
+                    }
+                    else if (chr == 'x' || chr == 'X') {
+                        //handle Hexadecimal prefix
+                        reading = "0x"
+                    }
+                    else if (chr == 'o' || chr == 'O') {
+                        //handle octal prefix
+                        reading = "0o"
+                    }
+                    else if (is_numeric(chr)) {
+                        //handle octal prefix
+                        reading = '0o' + chr
+                    }
+                    else if (chr == '.' || chr == 'e' || chr == 'E') {
+                        //handle floating point exponents
+                        if (chr == '.') {
+                            reading = reading + chr
+                            reading_state = 'float_dot'
+                        }
+                        else if (chr == 'e') {
+                            reading = reading + chr
+                            reading_state = 'float_expo'
+                        }
+                        else {
+                            reading = '0e'
+                            reading_state = 'float_expo'
                         }
                     }
-                    tokenList.add([read_line, [3, ['i', val]]]);
-                    revert();
-                }
-                return
-            }
-            if (reading[0] == '0' && reading[1] == 'o') {
-                if (/^[0-7]$/.test(chr)) {
-                    reading += chr;
-                }
-                else if (is_numeric(chr)) {
-                    ERROR_OCCURED = true;
-                    ERR_msg = "Invalid Octal value, must be a number between 0 and 7";
-                }
-                else if (reading == '0o') {
-                    ERROR_OCCURED = true;
-                    ERR_msg = "Invalid Octal value, must have atleast one octal digit";
-                }
-                else {
-                    //convert octal to decimal
-                    let val = 0;
-                    for (let hex_ind = 2; hex_ind < reading.length; hex_ind++) {
-                        val = val << 4;
-                        val += Number(reading[hex_ind]);
+                    else {
+                        // store a Zero int;
+                        tokenList.add([read_line, [3, ['i', 0]]]);
+                        revert();
                     }
-                    tokenList.add([read_line, [3, ['i', val]]]);
-                    revert();
+                    return
                 }
-                return
-            }
-            if (is_numeric(reading)) {
-                if (is_numeric(chr)) {
-                    reading = reading + chr;
+                if (reading[0] == '0' && reading[1] == 'b') {
+                    if (chr == '0' || chr == '1') {
+                        reading += chr;
+                    }
+                    else if (is_numeric(chr)) {
+                        ERROR_OCCURED = true;
+                        ERR_msg = "incorrect binary format, 0 or 1 expected"
+                    }
+                    else if (reading == '0b') {
+                        ERROR_OCCURED = true;
+                        ERR_msg = "incorrect binary format, must have at least one bit"
+                    }
+                    else {
+                        //convert binary to decimal
+                        let val = 0;
+                        for (let bin_ind = 2; bin_ind < reading.length; bin_ind++) {
+                            val = val << 1;
+                            if (reading[bin_ind] == '1') {
+                                val++;
+                            }
+                        }
+                        tokenList.add([read_line, [3, ['i', val]]]);
+                        revert();
+                    }
+                    return
                 }
-                else if (chr == '.') {
-                    reading = reading + chr;
-                    reading_state = 'float_dot';
+                if (reading[0] == '0' && reading[1] == 'x') {
+                    if (/^[a-fA-F0-9]$/.test(chr)) {
+                        reading += chr;
+                    }
+                    else if (reading == '0x') {
+                        ERROR_OCCURED = true;
+                        ERR_msg = "Invalid Hex Format, expected at least one hex digit"
+                    }
+                    else {
+                        //convert hex to decimal
+                        let val = 0;
+                        for (let hex_ind = 2; hex_ind < reading.length; hex_ind++) {
+                            val = val << 4;
+                            // if (is_numeric(reading[hex_ind])) {
+                            //     val += Number(reading[hex_ind]);
+                            // }
+                            // else {
+                            //     val += {
+                            //         'a': 10, 'b': 11, 'c': 12, 'd': 13, 'e': 14, 'f': 15,
+                            //         'A': 10, 'B': 11, 'C': 12, 'D': 13, 'E': 14, 'F': 15
+                            //     }[reading[hex_ind]];
+                            // }
+                            val += hex_digit[reading[hex_ind]]
+                        }
+                        tokenList.add([read_line, [3, ['i', val]]]);
+                        revert();
+                    }
+                    return
                 }
-                else if (chr == 'e') {
-                    reading = reading + chr;
-                    reading_state = 'float_expo';
+                if (reading[0] == '0' && reading[1] == 'o') {
+                    if (/^[0-7]$/.test(chr)) {
+                        reading += chr;
+                    }
+                    else if (is_numeric(chr)) {
+                        ERROR_OCCURED = true;
+                        ERR_msg = "Invalid Octal value, must be a number between 0 and 7";
+                    }
+                    else if (reading == '0o') {
+                        ERROR_OCCURED = true;
+                        ERR_msg = "Invalid Octal value, must have atleast one octal digit";
+                    }
+                    else {
+                        //convert octal to decimal
+                        let val = 0;
+                        for (let hex_ind = 2; hex_ind < reading.length; hex_ind++) {
+                            val = val << 4;
+                            val += Number(reading[hex_ind]);
+                        }
+                        tokenList.add([read_line, [3, ['i', val]]]);
+                        revert();
+                    }
+                    return
                 }
-                else {
-                    tokenList.add([read_line, [3, ['i', Number(reading)]]]);
-                    revert();
+                if (is_numeric(reading)) {
+                    if (is_numeric(chr)) {
+                        reading = reading + chr;
+                    }
+                    else if (chr == '.') {
+                        reading = reading + chr;
+                        reading_state = 'float_dot';
+                    }
+                    else if (chr == 'e') {
+                        reading = reading + chr;
+                        reading_state = 'float_expo';
+                    }
+                    else {
+                        tokenList.add([read_line, [3, ['i', Number(reading)]]]);
+                        revert();
+                    }
+                    return
                 }
-                return
+                //characters
+                if (reading == "'") {
+                    if (chr == "'") {
+                        ERROR_OCCURED = true;
+                        ERR_msg = "Empty character constant"
+                    }
+                    else if (chr == '\\') {
+                        reading_state = 'char_escape'
+                        reading = reading + chr
+                    }
+                    else {
+                        reading = reading + chr;
+                        reading_state = 'char+'
+                    }
+                    return
+                }
+                //strings
+                if (reading == '"') {
+                    reading_state = "string"
+                    reading = Arr()
+                    dfa(chr, line_no);
+                    return
+                }
             }
             //test for floating
             if (reading_state == 'float_dot') {
@@ -722,76 +774,213 @@ function __interpreter() {
                 }
                 return
             }
-            if (reading == "'") {
-                if (chr == "'") {
-                    ERROR_OCCURED = true;
-                    ERR_msg = "Empty character constant"
-                }
-                else if (chr == '\\') {
-                    reading_state = 'char_escape'
-                    reading = reading + chr
-                }
-                else {
-                    reading = reading + chr;
-                    reading_state = 'char+'
-                }
-                return
-            }
             if (reading_state == 'char_escape') {
                 if (/^[0-7]$/.test(chr)) {
                     reading_state = 'char_escape1'
-                    reading_state += chr
+                    reading += chr
                 }
-                else if (chr == 'x') {
+                else if (chr == 'x' || chr == 'X') {
                     reading_state = 'char_hex'
-                    reading_state += chr
+                    reading += chr
                 }
-                else if (chr in ['a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '"', "'"]) {
+                else if (chr in escape_sequence) {
                     reading_state = 'char_escape_s';
-                    reading_state += chr
+                    reading += chr
                 }
-                else{
-                    reading="'"+chr;
+                else {
+                    reading = "'" + chr;
                     reading_state = 'char+'
                 }
                 return
             }
             if (reading_state == 'char+') {
-                if(chr == "'"){
+                if (chr == "'") {
                     tokenList.add([read_line, [3, ['i', reading.charCodeAt(1)]]])
                     clear()
                 }
-                else{
-                    ERROR_OCCURED=true;
-                    ERR_msg="Invalid character"
+                else {
+                    ERROR_OCCURED = true;
+                    ERR_msg = "Invalid character"
                 }
                 return
             }
             if (reading_state == 'char_escape1') {
+                if (/^[0-7]$/.test(chr)) {
+                    reading_state = 'char_escape2'
+                    reading += chr
+                }
+                else if (chr = "'") {
+                    tokenList.add([read_line, [3, ['i', Number(reading[2])]]])
+                    clear()
+                }
+                else {
+                    ERROR_OCCURED = true;
+                    ERR_msg = "Invalid Character"
+                }
                 return
             }
             if (reading_state == 'char_escape2') {
+                if (/^[0-7]$/.test(chr)) {
+                    reading_state = 'char_escape3'
+                    reading += chr
+                }
+                else if (chr = "'") {
+                    tokenList.add([read_line, [3, ['i', 8 * Number(reading[2]) + Number(reading[3])]]])
+                    clear()
+                }
+                else {
+                    ERROR_OCCURED = true;
+                    ERR_msg = "Invalid Character"
+                }
                 return
             }
             if (reading_state == 'char_escape3') {
+                if (chr = "'") {
+                    if (Number(reading[2]) > 1) {
+                        ERROR_OCCURED = true
+                        ERR_msg = "Out of range Octal Sequence"
+                    }
+                    else {
+                        tokenList.add([read_line, [3, ['i', 64 * Number(reading[2]) + 8 * Number(reading[3]) + Number(reading[4])]]])
+                        clear()
+                    }
+                }
+                else {
+                    ERROR_OCCURED = true;
+                    ERR_msg = "Invalid Character"
+                }
                 return
             }
             if (reading_state == 'char_escape_s') {
-                if(chr=="'"){
-                    tokenList.add([read_line, [3, ['i',
-                        {'a':7,'b':8,'f':12,'n':10,'r':13,
-                            't':9,'v':11,'\\':92,"'":39,'"':34,
-                        }[reading[2]]
-                    ]]])
+                if (chr == "'") {
+                    tokenList.add([read_line, [3, ['i',escape_sequence[reading[2]]]]])
                     clear()
                 }
-                else{
-                    ERROR_OCCURED=true;
-                    ERR_msg="Invalid character"
+                else {
+                    ERROR_OCCURED = true;
+                    ERR_msg = "Invalid character"
                 }
                 return
             }
             if (reading_state == 'char_hex') {
+                if (/^[0-9a-fA-F]$/.test(chr)) {
+                    reading += chr
+                    reading_state = 'char_hex1'
+                }
+                else {
+                    ERROR_OCCURED = true;
+                    ERR_msg = "Invalid Hex sequence"
+                }
+                return
+            }
+            if (reading_state == 'char_hex1') {
+                if (/^[0-9a-fA-F]$/.test(chr)) {
+                    reading += chr
+                    reading_state = 'char_hex2'
+                }
+                else if (chr == "'") {
+                    tokenList.add([read_line, [3, ['i', hex_digit[reading[3]]]]])
+                    clear()
+                }
+                else {
+                    ERROR_OCCURED = true;
+                    ERR_msg = "Invalid Hex sequence"
+                }
+                return
+            }
+            if (reading_state == 'char_hex2') {
+                if (chr == "'") {
+                    tokenList.add([read_line, [3, ['i', hex_digit[reading[3]] * 8 + hex_digit[reading[4]]]]])
+                    clear()
+                }
+                else {
+                    ERROR_OCCURED = true;
+                    ERR_msg = "Invalid Hex sequence"
+                }
+                return
+            }
+            //strings
+            /* note to future self, 
+                1.move the if conditions to a more nested setup,
+                    this is to skip the 'none' state character checks
+                2.try to make the character checks into a tree for more log(n) run time                    
+            */
+            if (reading_state == 'string') {
+                if (chr == '"') {
+                    tokenList.add([read_line, add_string(reading)]);
+                    clear();
+                }
+                else if (chr == '\\') {
+                    reading_state = "string_escape"
+                }
+                else {
+                    reading.push(chr.charCodeAt(0));
+                }
+                return
+            }
+            if (reading_state == 'string_escape') {
+                if (/^[0-7]$/.test(chr)) {
+                    reading_state = 'string_escape1'
+                    reading.push(Number(chr))
+                }
+                else if (chr == 'x' || chr == 'X') {
+                    reading_state = 'string_hex'
+                }
+                else if (chr in escape_sequence) {
+                    reading.push(escape_sequence[chr])
+                    reading_state = "string"
+                }
+                else if (chr == '"') {
+                    ERROR_OCCURED = true;
+                    ERR_msg = "Unfinished Escape Sequence"
+                }
+                else {
+                    reading.push(chr.charCodeAt(0));
+                    reading_state = 'string'
+                }
+                return
+            }
+            if (reading_state == 'string_escape1') {
+                if (/^[0-7]$/.test(chr)) {
+                    reading.top = reading.top * 8 + Number(chr)
+                    reading_state = 'string_escape2'
+                }
+                else {
+                    reading_state = 'string';
+                    dfa(chr, line_no)
+                }
+                return
+            }
+            if (reading_state == 'string_escape2') {
+                if (/^[0-7]$/.test(chr)) {
+                    reading.top = reading.top * 8 + Number(chr)
+                    reading_state = 'string'
+                }
+                else {
+                    reading_state = 'string';
+                    dfa(chr, line_no)
+                }
+                return
+            }
+            if (reading_state == 'string_hex') {
+                if (/^[0-9a-fA-F]$/.test(chr)) {
+                    reading.push(hex_digit[chr])
+                    reading_state = 'string_hex+'
+                }
+                else {
+                    ERROR_OCCURED = true
+                    ERR_msg = "There are no Hex digits given after \\x"
+                }
+                return
+            }
+            if (reading_state == 'string_hex+') {
+                if (/^[0-9a-fA-F]$/.test(chr)) {
+                    reading.top = (reading.top & 0xF) << 4 | hex_digit[chr]
+                }
+                else {
+                    reading_state = 'string'
+                    dfa(chr, line_no)
+                }
                 return
             }
             ERROR_OCCURED = true
@@ -800,6 +989,7 @@ function __interpreter() {
         }
         for (let line_no = 0; line_no < lines.length; line_no++) {
             for (let chr_no = 0; chr_no < lines[line_no][1].length; chr_no++) {
+                cur_line = line_no
                 dfa(lines[line_no][1][chr_no], cur_line)
                 if (ERROR_OCCURED) {
                     return { 'error at': [line_no, chr_no], 'error message': ERR_msg }
@@ -815,7 +1005,7 @@ function __interpreter() {
             "symbolTable": symbolTable
         }
     }
-    this.Parser = function (tokenList) {
+    this.Parser = function (LexerOutput) {
 
     }
     this.run = async function () {
@@ -837,6 +1027,60 @@ function __interpreter() {
         'beep': function () {
             let snd = new Audio("data:audio/mp3;base64,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qJrx4KOQjahZxWbcZgztj2c49nKmkId44S71j0c8eV9yDK6uPRzx5X18eDvjvQ6yKo9ZSS6l//8elePK/Lf//IInrOF/FvDoADYAGBMGb7FtErm5MXMlmPAJQVgWta7Zx2go+8xJ0UiCb8LHHdftWyLJE0QIAIsI+UbXu67dZMjmgDGCGl1H+vpF4NSDckSIkk7Vd+sxEhBQMRU8j/12UIRhzSaUdQ+rQU5kGeFxm+hb1oh6pWWmv3uvmReDl0UnvtapVaIzo1jZbf/pD6ElLqSX+rUmOQNpJFa/r+sa4e/pBlAABoAAAAA3CUgShLdGIxsY7AUABPRrgCABdDuQ5GC7DqPQCgbbJUAoRSUj+NIEig0YfyWUho1VBBBA//uQZB4ABZx5zfMakeAAAAmwAAAAF5F3P0w9GtAAACfAAAAAwLhMDmAYWMgVEG1U0FIGCBgXBXAtfMH10000EEEEEECUBYln03TTTdNBDZopopYvrTTdNa325mImNg3TTPV9q3pmY0xoO6bv3r00y+IDGid/9aaaZTGMuj9mpu9Mpio1dXrr5HERTZSmqU36A3CumzN/9Robv/Xx4v9ijkSRSNLQhAWumap82WRSBUqXStV/YcS+XVLnSS+WLDroqArFkMEsAS+eWmrUzrO0oEmE40RlMZ5+ODIkAyKAGUwZ3mVKmcamcJnMW26MRPgUw6j+LkhyHGVGYjSUUKNpuJUQoOIAyDvEyG8S5yfK6dhZc0Tx1KI/gviKL6qvvFs1+bWtaz58uUNnryq6kt5RzOCkPWlVqVX2a/EEBUdU1KrXLf40GoiiFXK///qpoiDXrOgqDR38JB0bw7SoL+ZB9o1RCkQjQ2CBYZKd/+VJxZRRZlqSkKiws0WFxUyCwsKiMy7hUVFhIaCrNQsKkTIsLivwKKigsj8XYlwt/WKi2N4d//uQRCSAAjURNIHpMZBGYiaQPSYyAAABLAAAAAAAACWAAAAApUF/Mg+0aohSIRobBAsMlO//Kk4soosy1JSFRYWaLC4qZBYWFRGZdwqKiwkNBVmoWFSJkWFxX4FFRQWR+LsS4W/rFRb/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////VEFHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAU291bmRib3kuZGUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMjAwNGh0dHA6Ly93d3cuc291bmRib3kuZGUAAAAAAAAAACU=");
             snd.play();
+        },
+        'debug_token_reader': function (LexerOutput) {
+            let k = keywords, o = operators, i = LexerOutput['symbolTable']['identifiers'], out = [];
+            for (let _i = 0; _i <= LexerOutput['tokenList'].top[0]; _i++) {
+                out.push([])
+            }
+            for (let _i = 0; _i < LexerOutput['tokenList'].length; _i++) {
+                let v = LexerOutput['tokenList'][_i][1];
+                let u = LexerOutput['tokenList'][_i][0];
+                if (v[0] == 0) {
+                    for (let j in k) {
+                        if (k[j] == v) {
+                            out[u].push(j);
+                        }
+                    }
+                }
+                else if (v[0] == 1) {
+                    for (let j in o) {
+                        if (o[j] == v) {
+                            out[u].push(j);
+                        }
+                    }
+                }
+                else if (v[0] == 2) {
+                    for (let j in i) {
+                        if (i[j] == v) {
+                            out[u].push(j);
+                        }
+                    }
+                }
+                else if (v[0] == 3) {
+                    if (v[1][0] == 'i') {
+                        out[u].push(v[1][1]);
+                    }
+                    else if (v[1][0] == 'f') {
+                        out[u].push(v[1][1]);
+                    }
+                }
+                else if (v[0] == 4) {
+                    for (let j in LexerOutput['symbolTable']['strings']) {
+                        if (LexerOutput['symbolTable']['strings'][j] == v) {
+                            out[u].push(j);
+                        }
+                    }
+                }
+            }
+            return out;
+        },
+        'line_spitter': function (txt) {
+            let out = txt.split('\n');
+            for (let i = 0; i < out.length; i++) {
+                out[i] = [i, out[i]]
+            }
+            return out;
         }
     }
 }
