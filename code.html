@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codevyu - User Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .panel {
+            overflow: auto;
+        }
+        
+        .vertical-divider {
+            width: 6px;
+            background: #00C896;
+            cursor: ew-resize;
+            z-index: 10;
+        }
+        
+        .horizontal-divider {
+            height: 6px;
+            background: #00C896;
+            cursor: ns-resize;
+            z-index: 10;
+        }
+        
+        .scrollable {
+            overflow-y: auto;
+            max-height: 300px;
+        }
+    </style>
+</head>
+<body class="bg-[#181818] text-[#E0E0E0]">
+    <div class="flex h-screen relative">
+        <!-- Left Panel: Question Section -->
+        <div id="questionPanel" class="panel bg-[#252525] p-4 shadow-lg border border-[#00C896]" style="width: 40%;">
+            <h2 class="text-xl font-bold border-b pb-2 border-[#00C896]">Problem Statement</h2>
+            <p id="problemText" class="mt-2 text-white scrollable">This is the section...<br>
+              where all the problem statements will be displayed!
+            </p>
+        </div>
+        
+        <!-- Vertical Divider (Question/Editor) -->
+        <div id="verticalDivider" class="vertical-divider"></div>
+        
+        <!-- Right Panel: Code Editor and Results Section -->
+        <div id="rightPanel" class="flex flex-col flex-grow" style="width: 60%;">
+            <div id="editorContainer" class="p-4" style="height: 65%;">
+                <textarea id="codeEditor" class="w-full h-full p-2 border border-[#00C896] bg-[#252525] text-[#E0E0E0] rounded-md" placeholder="Write your code here..."></textarea>
+            </div>
+            
+            <!-- Horizontal Divider (Editor/Results) -->
+            <div id="horizontalDivider" class="horizontal-divider"></div>
+            
+            <!-- Bottom Panel: Results Section -->
+            <div id="resultsContainer" class="p-4" style="height: 35%;">
+                <!-- Run Code Button -->
+                <button class="mb-2 bg-[#00C896] text-black px-4 py-2 rounded hover:bg-[#00A982]" onclick="send_to_interpreter()">Run Code</button>
+                
+                <div id="resultsSection" class="bg-[#252525] p-3 border border-[#00C896] rounded-md h-full overflow-auto">
+                    <h2 class="text-lg font-semibold">Output</h2>
+                    <div class="grid grid-cols-3 gap-2 mt-2">
+                        <div class="bg-[#303030] p-2 border border-[#00C896] rounded-md">
+                            <h3 class="text-sm font-bold">Console Output</h3>
+                            <pre id="output1" class="text-sm">No Output</pre>
+                        </div>
+                        <div class="bg-[#303030] p-2 border border-[#00C896] rounded-md">
+                            <h3 class="text-sm font-bold">Test Case 2</h3>
+                            <pre id="output2" class="text-sm">Expected: - <br>Actual: - <br>Status: Pending...</pre>
+                        </div>
+                        <div class="bg-[#303030] p-2 border border-[#00C896] rounded-md">
+                            <h3 class="text-sm font-bold">Test Case 3</h3>
+                            <pre id="output3" class="text-sm">Expected: - <br>Actual: - <br>Status: Pending...</pre>
+                        </div>
+                    </div>
+                    <!-- Execution Stats Section -->
+                    <div class="bg-[#303030] p-2 border border-[#00C896] rounded-md mt-2">
+                        <h3 class="text-sm font-bold">Execution Stats</h3>
+                        <pre id="statsSection" class="text-sm">Execution Time: - ms | Memory Usage: - KB</pre>
+                    </div>
+                    <!-- Note Section -->
+                    <div class="bg-[#303030] p-2 border border-[#00C896] rounded-md mt-2">
+                        <h3 class="text-sm font-bold">Note</h3>
+                        <pre id="noteSection" class="text-sm">No additional notes.</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Get elements
+        const questionPanel = document.getElementById("questionPanel");
+        const rightPanel = document.getElementById("rightPanel");
+        const verticalDivider = document.getElementById("verticalDivider");
+        const editorContainer = document.getElementById("editorContainer");
+        const resultsContainer = document.getElementById("resultsContainer");
+        const horizontalDivider = document.getElementById("horizontalDivider");
+        const editor = document.getElementById("codeEditor");
+        
+        // State variables
+        let isVerticalDragging = false;
+        let isHorizontalDragging = false;
+        let initialWidth;
+        let initialHeight;
+        let initialX;
+        let initialY;
+        
+        // Vertical divider (resize question panel width)
+        verticalDivider.addEventListener("mousedown", function(e) {
+            isVerticalDragging = true;
+            initialWidth = questionPanel.offsetWidth;
+            initialX = e.clientX;
+            document.body.style.cursor = "ew-resize";
+            e.preventDefault();
+        });
+        
+        // Horizontal divider (resize editor height)
+        horizontalDivider.addEventListener("mousedown", function(e) {
+            isHorizontalDragging = true;
+            initialHeight = editorContainer.offsetHeight;
+            initialY = e.clientY;
+            document.body.style.cursor = "ns-resize";
+            e.preventDefault();
+        });
+        
+        // Handle mouse movements
+        document.addEventListener("mousemove", function(e) {
+            if (isVerticalDragging) {
+                // Calculate new width for question panel
+                const containerWidth = document.body.clientWidth;
+                const deltaX = e.clientX - initialX;
+                let newWidth = initialWidth + deltaX;
+                
+                // Set minimum and maximum widths
+                const minWidth = 200;
+                const maxWidth = containerWidth * 0.7; // 70% of screen width
+                
+                if (newWidth < minWidth) newWidth = minWidth;
+                if (newWidth > maxWidth) newWidth = maxWidth;
+                
+                // Calculate percentage
+                const widthPercentage = (newWidth / containerWidth) * 100;
+                
+                // Apply new width
+                questionPanel.style.width = `${widthPercentage}%`;
+                rightPanel.style.width = `${100 - widthPercentage}%`;
+            }
+            
+            if (isHorizontalDragging) {
+                // Calculate new heights for editor and results
+                const containerHeight = rightPanel.clientHeight;
+                const deltaY = e.clientY - initialY;
+                let newEditorHeight = initialHeight + deltaY;
+                
+                // Set minimum and maximum heights
+                const minHeight = 100;
+                const maxHeight = containerHeight - 100;
+                
+                if (newEditorHeight < minHeight) newEditorHeight = minHeight;
+                if (newEditorHeight > maxHeight) newEditorHeight = maxHeight;
+                
+                // Calculate percentage
+                const editorHeightPercentage = (newEditorHeight / containerHeight) * 100;
+                const resultsHeightPercentage = 100 - editorHeightPercentage;
+                
+                // Apply new heights
+                editorContainer.style.height = `${editorHeightPercentage}%`;
+                resultsContainer.style.height = `${resultsHeightPercentage}%`;
+            }
+        });
+        
+        // Handle mouse up
+        document.addEventListener("mouseup", function() {
+            isVerticalDragging = false;
+            isHorizontalDragging = false;
+            document.body.style.cursor = "default";
+        });
+        
+        // Ensure proper sizing on window resize
+        window.addEventListener("resize", function() {
+            // Recalculate heights and widths if needed
+            const rightPanelHeight = rightPanel.clientHeight;
+            const editorHeightPercentage = (editorContainer.offsetHeight / rightPanelHeight) * 100;
+            const resultsHeightPercentage = 100 - editorHeightPercentage;
+            
+            editorContainer.style.height = `${editorHeightPercentage}%`;
+            resultsContainer.style.height = `${resultsHeightPercentage}%`;
+        });
+        
+        // Disable Copy, Cut, Paste (preserved from original code)
+        editor.addEventListener("copy", (e) => e.preventDefault());
+        editor.addEventListener("cut", (e) => e.preventDefault());
+        editor.addEventListener("paste", (e) => e.preventDefault());
+    
+        // Block Ctrl + C, Ctrl + V, Ctrl + X (preserved from original code)
+        editor.addEventListener("keydown", function (e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === "v" || e.key === "c" || e.key === "x")) {
+                e.preventDefault();
+            }
+        });
+    </script>
+    <script type="text/javascript" src="./Interpreter.js"></script>
+    <script>
+        function send_to_interpreter(){
+            console.log("Testing")
+            let _a=document.getElementById("codeEditor");
+            console.log(_a.value);
+            let _b=_a.value.split("\n");
+            for(let _i=0; _i<_b.length; _i++){
+                _b[_i]=[_i,_b[_i]+'\n'];
+            }
+
+            console.log(_b);
+            Interpreter.run(_b);
+        }
+    </script>
+</body>
+</html>
