@@ -122,7 +122,94 @@ function __interpreter() {
         ";": [1, 58],
     };
     this.Preprocessor = function (lines) {
+        //checking for directives
+        debugger;
+        let ERROR_OCCURED=false,ERR_msg='',last_line=0;
+        let out=[],directives={"define":[],"include":[],"undef":[],"ifdef":[],"ifndef":[],"else":[],"endif":[]};
+        for(let i=0; i<lines.length; i++) {
+            if(lines[i][0]>last_line){
+                last_line=lines[i][0]
+            }
+            if(/^\s*#\s*/.test(lines[i][1])){
+                let line=lines[i][1].slice(lines[i][1].indexOf("#")+1);
+                if(/^\s*define\s+.+/.test(line)){
+                    let j=line.indexOf('define')+7,word='',rpl='';
+                    while(j<line.length) {
+                        if(is_alphanum(line[j]) || line[j]=='_'){
+                            word+=line[j];
+                        }
+                        else if(/^\s$/.test(line[j])){
+                            if (word!=''){
+                                rpl=line.slice(j)
+                                break;
+                            }
+                        }
+                        j++;
+                    }
+                    if(!is_valid_identifier(word)){
+                        ERROR_OCCURED=true;
+                        ERR_msg="Invalid identifier in #define"
+                    }
+                    else{
+                        directives['define'].push([i,word,rpl])
+                    }
+                }
+                else if(/^\s*undef\s+$/.test(line)){
+                    let j=line.indexOf('undef')+6,word='';
+                    while(j<line.length) {
+                        if(is_alphanum(line[j]) || line[j]=='_'){
+                            word+=line[j];
+                        }
+                        else if(/^\s$/.test(line[j])){
+                            if (word!=''){
+                                rpl=line.slice(j)
+                                break;
+                            }
+                        }
+                        j++;
+                    }
+                    if(!is_valid_identifier(word)){
+                        ERROR_OCCURED=true;
+                        ERR_msg="Invalid identifier in #undef"
+                    }
+                    else{
+                        directives['undef'].push([i,word])
+                    }
+                }
+                if (ERROR_OCCURED) {
+                    return { 'error at': [line_no, lines[line_no][1]], 'error message': ERR_msg }
+                }
+                out.push([lines[i][0],''])
+            }
+            else{
+                out.push(lines[i])
+            }
+        }
+        //#define handling
+        let definition={/* Identifier:[[start line, repl]] */}
+        for(let i=0;i<directives['define'].length;i++){
+            if(!(directives['define'][i][1] in definition)){
+                definition[directives['define'][i][1]]=[]
+            }
+            definition[directives['define'][i][1]].push([directives['define'][i][0],directives['define'][i][2]])
+        }
+        for(let i=0;i<directives['undef'].length;i++){
+            if(!(directives['undef'][i][1] in definition)){
+                definition[directives['undef'][i][1]]=[]
+            }
+            definition[directives['undef'][i][1]].push([directives['undef'][i][0]])
+        }
+        for(let i in definition){
+            definition[i].push([-1])
+            definition[i].push([last_line+1])
+            definition[i].sort((a,b)=>a[0]-b[0])
+            let regions=[],mode=0;
+            for(let j=0;j<definition[i].length;j++){
+                if(mode==0){
 
+                }
+            }
+        }
     }
     this.Lexer = function (lines) {
         /*
