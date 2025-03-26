@@ -1,0 +1,16 @@
+//example code
+//#includes, #defines, etc aren't supported yet
+//but printf(), malloc(), calloc(), realloc() ,free() ,exit() are still callable
+//this interpretter has a limit of 20KB of heap data and 4kb worth of local variables
+//
+int main(){
+	int a=4;
+	int b=5;
+	printf("blah blah");
+	printf("\n%d",a+b);
+    for(int i=0;i<10;i++){
+        printf("\a%d",i);
+    }
+    print("TEST TERMINATED");
+	return 0;
+}
