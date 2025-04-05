@@ -156,7 +156,7 @@ function __interpreter() {
                     }
                 }
                 else if(/^\s*undef\s+$/.test(line)){
-                    let j=line.indexOf('undef')+6,word='';
+                    let j=line.indexOf('undef')+6,word='',rpl='';
                     while(j<line.length) {
                         if(is_alphanum(line[j]) || line[j]=='_'){
                             word+=line[j];
@@ -178,7 +178,7 @@ function __interpreter() {
                     }
                 }
                 if (ERROR_OCCURED) {
-                    return { 'error at': [line_no, lines[line_no][1]], 'error message': ERR_msg }
+                    return { 'error at': [i, lines[i][1]], 'error message': ERR_msg }
                 }
                 out.push([lines[i][0],''])
             }
@@ -201,16 +201,41 @@ function __interpreter() {
             definition[directives['undef'][i][1]].push([directives['undef'][i][0]])
         }
         for(let i in definition){
-            definition[i].push([-1])
+            // definition[i].push([-1])
             definition[i].push([last_line+1])
             definition[i].sort((a,b)=>a[0]-b[0])
-            let regions=[],mode=0;
-            for(let j=0;j<definition[i].length;j++){
-                if(mode==0){
-
+            // let regions=[];
+            for(let j=0;j<definition[i].length-1;j++){
+                if(definition[i][j].length==2 && definition[i][j+1].length!==undefined){
+                    for(let k=definition[i][j][0];k<definition[i][j+1][0];k++){
+                        let temp = "";
+                        for(let l=0;l<out[k][1].length;l++){
+                            let chr=out[k][1][l];
+                            if(temp==''){
+                                if(/^[a-zA-Z_]$/.test(chr)){
+                                    temp=chr;
+                                }
+                            }
+                            else if(/^[a-zA-Z_]/.test(temp)){
+                                if(/^[a-zA-Z0-9_]$/.test(chr)){
+                                    temp=temp+chr;
+                                }
+                                else{
+                                    if(temp==i){
+                                        out[k][1]=out[k][1].slice(0,l-temp.length)+definition[i][j][1]+out[k][1].slice(l);
+                                        l-=temp.length;
+                                        l+=definition[i][j][1].length;
+                                    }
+                                    l--;
+                                    temp='';
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
+        return out;
     }
     this.Lexer = function (lines) {
         /*
@@ -1569,7 +1594,7 @@ function __interpreter() {
             }
             let F = function (s) {
                 switch (s) {
-                    case ',': 1
+                    case ',': return 1;
                     case '=':
                     case '+=':
                     case '-=':
@@ -3093,7 +3118,7 @@ function __interpreter() {
             console.log("crashed")
             console.log(extra_detail['error word'])
             Program = []
-            showErrorPopup(extra_detail["error word"]);
+            // showErrorPopup(extra_detail["error word"]);
             throw new Error(extra_detail['error word'])
         }
         function TypeCastInt(value) {
@@ -3190,7 +3215,7 @@ function __interpreter() {
             deallocateOutOfScopeVariables(-1)
             try {
                 PAUSE_EXEC = true
-                Pauseexecution()
+                // Pauseexecution()
             }
             catch (e) { }
             Variables = []
@@ -4637,10 +4662,17 @@ function __interpreter() {
             }
             return out;
         },
-        'line_spitter': function (txt) {
+        'line_splitter': function (txt) {
             let out = txt.split('\n');
             for (let i = 0; i < out.length; i++) {
                 out[i] = [i, out[i]]
+            }
+            return out;
+        },
+        'line_merger': function (lines) {
+            let out='';
+            for (let i = 0; i < lines.length; i++) {
+                out+=lines[i][1]+'\n';
             }
             return out;
         }
