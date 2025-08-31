@@ -1,67 +1,149 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
+const { body, validationResult } = require("express-validator");
 const User = require("../models/User");
 
 const router = express.Router();
 
-// Register
-router.post("/register", async (req, res) => {
-  const { userspace, username, password } = req.body;
-  if (!userspace || !username || !password) {
-    return res.status(400).json({ message: "Missing fields" });
+// Helper: sanitize input (to prevent NoSQL injection)
+function sanitize(input) {
+  if (typeof input === "object") {
+    throw new Error("Invalid input");
   }
+  return String(input).trim();
+}
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+// Middleware: validate and sanitize errors
+function handleValidationErrors(req, res, next) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+  next();
+}
 
-  const newUser = new User({
-    userspace,
-    username,
-    password_hash: hashedPassword,
-  });
+// ---------------- AUTH ROUTES ----------------
 
-  await newUser.save();
-  res.json({ message: "User registered successfully" });
-});
+// Register
+router.post(
+  "/register",
+  [
+    body("userspace").isString().trim().notEmpty(),
+    body("username").isString().trim().notEmpty(),
+    body("password").isLength({ min: 6 }),
+  ],
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const userspace = sanitize(req.body.userspace);
+      const username = sanitize(req.body.username);
+      const password = req.body.password;
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const newUser = new User({
+        userspace,
+        username,
+        password_hash: hashedPassword,
+      });
+
+      await newUser.save();
+      res.json({ message: "User registered successfully" });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
 
 // Login
-router.post("/login", async (req, res) => {
-  const { userspace, username, password } = req.body;
-  const user = await User.findOne({ userspace, username });
-  if (!user) return res.status(404).json({ message: "User not found" });
+router.post(
+  "/login",
+  [
+    body("userspace").isString().trim().notEmpty(),
+    body("username").isString().trim().notEmpty(),
+    body("password").isString().notEmpty(),
+  ],
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const userspace = sanitize(req.body.userspace);
+      const username = sanitize(req.body.username);
+      const password = req.body.password;
 
-  const isMatch = await bcrypt.compare(password, user.password_hash);
-  if (!isMatch) return res.status(401).json({ message: "Invalid password" });
+      const user = await User.findOne({ userspace, username });
+      if (!user) return res.status(404).json({ message: "User not found" });
 
-  res.json({ message: "Login successful" });
-});
+      const isMatch = await bcrypt.compare(password, user.password_hash);
+      if (!isMatch) return res.status(401).json({ message: "Invalid password" });
+
+      res.json({ message: "Login successful" });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
 
 // Delete
-router.delete("/delete", async (req, res) => {
-  const { userspace, username, password } = req.body;
-  const user = await User.findOne({ userspace, username });
-  if (!user) return res.status(404).json({ message: "User not found" });
+router.delete(
+  "/delete",
+  [
+    body("userspace").isString().trim().notEmpty(),
+    body("username").isString().trim().notEmpty(),
+    body("password").isString().notEmpty(),
+  ],
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const userspace = sanitize(req.body.userspace);
+      const username = sanitize(req.body.username);
+      const password = req.body.password;
 
-  const isMatch = await bcrypt.compare(password, user.password_hash);
-  if (!isMatch) return res.status(401).json({ message: "Invalid password" });
+      const user = await User.findOne({ userspace, username });
+      if (!user) return res.status(404).json({ message: "User not found" });
 
-  await User.deleteOne({ _id: user._id });
-  res.json({ message: "User deleted successfully" });
-});
+      const isMatch = await bcrypt.compare(password, user.password_hash);
+      if (!isMatch) return res.status(401).json({ message: "Invalid password" });
+
+      await User.deleteOne({ _id: user._id });
+      res.json({ message: "User deleted successfully" });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
 
 // Change password
-router.put("/change-password", async (req, res) => {
-  const { userspace, username, password, new_pass } = req.body;
-  const user = await User.findOne({ userspace, username });
-  if (!user) return res.status(404).json({ message: "User not found" });
+router.put(
+  "/change-password",
+  [
+    body("userspace").isString().trim().notEmpty(),
+    body("username").isString().trim().notEmpty(),
+    body("password").isString().notEmpty(),
+    body("new_pass").isLength({ min: 6 }),
+  ],
+  handleValidationErrors,
+  async (req, res) => {
+    try {
+      const userspace = sanitize(req.body.userspace);
+      const username = sanitize(req.body.username);
+      const password = req.body.password;
+      const new_pass = req.body.new_pass;
 
-  const isMatch = await bcrypt.compare(password, user.password_hash);
-  if (!isMatch) return res.status(401).json({ message: "Invalid current password" });
+      const user = await User.findOne({ userspace, username });
+      if (!user) return res.status(404).json({ message: "User not found" });
 
-  const newHashed = await bcrypt.hash(new_pass, 10);
-  user.password_hash = newHashed;
-  await user.save();
+      const isMatch = await bcrypt.compare(password, user.password_hash);
+      if (!isMatch) return res.status(401).json({ message: "Invalid current password" });
 
-  res.json({ message: "Password updated successfully" });
-});
+      const newHashed = await bcrypt.hash(new_pass, 10);
+      user.password_hash = newHashed;
+      await user.save();
+
+      res.json({ message: "Password updated successfully" });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
 
 module.exports = router;
